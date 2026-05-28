@@ -40,6 +40,7 @@ import { Heap } from "./cli/heap"
 import { drizzle } from "drizzle-orm/bun-sqlite"
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process"
 import { isRecord } from "@/util/record"
+import { t, getLocale } from "@/i18n/index"
 
 const processMetadata = ensureProcessMetadata("main")
 
@@ -71,21 +72,21 @@ const cli = yargs(args)
   .parserConfiguration({ "populate--": true })
   .scriptName("opencode")
   .wrap(100)
-  .help("help", "show help")
+  .help("help", t("cli.help"))
   .alias("help", "h")
-  .version("version", "show version number", InstallationVersion)
+  .version("version", t("cli.version"), InstallationVersion)
   .alias("version", "v")
   .option("print-logs", {
-    describe: "print logs to stderr",
+    describe: t("cli.printLogs"),
     type: "boolean",
   })
   .option("log-level", {
-    describe: "log level",
+    describe: t("cli.logLevel"),
     type: "string",
     choices: ["DEBUG", "INFO", "WARN", "ERROR"],
   })
   .option("pure", {
-    describe: "run without external plugins",
+    describe: t("cli.pure"),
     type: "boolean",
   })
   .middleware(async (opts) => {
@@ -119,7 +120,7 @@ const cli = yargs(args)
     const marker = path.join(Global.Path.data, "opencode.db")
     if (!(await Filesystem.exists(marker))) {
       const tty = process.stderr.isTTY
-      process.stderr.write("Performing one time database migration, may take a few minutes..." + EOL)
+      process.stderr.write(t("migration.running") + EOL)
       const width = 36
       const orange = "\x1b[38;5;214m"
       const muted = "\x1b[0;2m"
@@ -150,11 +151,11 @@ const cli = yargs(args)
           process.stderr.write(`sqlite-migration:done${EOL}`)
         }
       }
-      process.stderr.write("Database migration complete." + EOL)
+      process.stderr.write(t("migration.done") + EOL)
     }
   })
   .usage("")
-  .completion("completion", "generate shell completion script")
+  .completion("completion", t("cli.completion"))
   .command(AcpCommand)
   .command(McpCommand)
   .command(TuiThreadCommand)
@@ -238,7 +239,7 @@ try {
   const formatted = FormatError(e)
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {
-    UI.error("Unexpected error, check log file at " + Log.file() + " for more details" + EOL)
+    UI.error(t("error.unexpected", { file: Log.file() }) + EOL)
     process.stderr.write(errorMessage(e) + EOL)
   }
   process.exitCode = 1
