@@ -1,32 +1,33 @@
 import type { Argv, InferredOptionTypes } from "yargs"
 import { Config } from "@/config/config"
 import { Effect } from "effect"
+import { t } from "@/i18n/index"
 
 const options = {
   port: {
     type: "number" as const,
-    describe: "port to listen on",
+    describe: t("network.port_to_listen_on"),
     default: 0,
   },
   hostname: {
     type: "string" as const,
-    describe: "hostname to listen on",
+    describe: t("network.hostname_to_listen_on"),
     default: "127.0.0.1",
   },
   mdns: {
     type: "boolean" as const,
-    describe: "enable mDNS service discovery (defaults hostname to 0.0.0.0)",
+    describe: t("network.enable_mdns_service_discovery_defaults_hostname_to"),
     default: false,
   },
   "mdns-domain": {
     type: "string" as const,
-    describe: "custom domain name for mDNS service (default: opencode.local)",
+    describe: t("network.custom_domain_name_for_mdns_service_default_openco"),
     default: "opencode.local",
   },
   cors: {
     type: "string" as const,
     array: true,
-    describe: "additional domains to allow for CORS",
+    describe: t("network.additional_domains_to_allow_for_cors"),
     default: [] as string[],
   },
 }

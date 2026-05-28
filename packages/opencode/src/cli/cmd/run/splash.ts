@@ -21,9 +21,10 @@ import {
 import * as Locale from "@/util/locale"
 import { go, logo } from "@/cli/logo"
 import type { RunSplashTheme } from "./theme"
+import { t } from "@/i18n/index"
 
 export const SPLASH_TITLE_LIMIT = 50
-export const SPLASH_TITLE_FALLBACK = "Untitled session"
+export const SPLASH_TITLE_FALLBACK = t("splash.untitled_session")
 
 type SplashInput = {
   title: string | undefined
@@ -230,7 +231,7 @@ function build(input: SplashWriterInput, kind: "entry" | "exit", ctx: Scrollback
 
     if (input.showSession !== false) {
       const top = logo.left.length + 1
-      const label = "Session".padEnd(10, " ")
+      const label = t("splash.session").padEnd(10, " ")
       push(lines, 0, top, label, left, undefined, TextAttributes.DIM)
       push(lines, label.length, top, meta.title, right, undefined, TextAttributes.BOLD)
       height = top + 1
@@ -241,8 +242,8 @@ function build(input: SplashWriterInput, kind: "entry" | "exit", ctx: Scrollback
     const mark = go.right.slice(1)
     const top = 1
     const body_left = (mark[0]?.length ?? 0) + 2
-    const session = "Session  "
-    const label = "Continue "
+    const session = t("splash.session_1")
+    const label = t("splash.continue")
 
     for (let i = 0; i < mark.length; i += 1) {
       draw(lines, mark[i] ?? "", {

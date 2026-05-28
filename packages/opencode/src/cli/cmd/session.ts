@@ -13,6 +13,7 @@ import { NotFoundError } from "@/storage/storage"
 import { EOL } from "os"
 import path from "path"
 import { which } from "../../util/which"
+import { t } from "@/i18n/index"
 
 function pagerCmd(): string[] {
   const lessOptions = ["-R", "-S"]
@@ -43,17 +44,17 @@ function pagerCmd(): string[] {
 
 export const SessionCommand = cmd({
   command: "session",
-  describe: "manage sessions",
+  describe: t("session.manage_sessions"),
   builder: (yargs: Argv) => yargs.command(SessionListCommand).command(SessionDeleteCommand).demandCommand(),
   async handler() {},
 })
 
 export const SessionDeleteCommand = effectCmd({
   command: "delete <sessionID>",
-  describe: "delete a session",
+  describe: t("session.delete_a_session"),
   builder: (yargs) =>
     yargs.positional("sessionID", {
-      describe: "session ID to delete",
+      describe: t("session.session_id_to_delete"),
       type: "string",
       demandOption: true,
     }),
@@ -62,23 +63,23 @@ export const SessionDeleteCommand = effectCmd({
     const sessionID = SessionID.make(args.sessionID)
     yield* svc
       .remove(sessionID)
-      .pipe(Effect.catchIf(NotFoundError.isInstance, () => fail(`Session not found: ${args.sessionID}`)))
-    UI.println(UI.Style.TEXT_SUCCESS_BOLD + `Session ${args.sessionID} deleted` + UI.Style.TEXT_NORMAL)
+      .pipe(Effect.catchIf(NotFoundError.isInstance, () => fail(t("session.session_not_found", { args_sessionID: args.sessionID }))))
+    UI.println(UI.Style.TEXT_SUCCESS_BOLD + t("session.session_deleted", { args_sessionID: args.sessionID }) + UI.Style.TEXT_NORMAL)
   }),
 })
 
 export const SessionListCommand = effectCmd({
   command: "list",
-  describe: "list sessions",
+  describe: t("session.list_sessions"),
   builder: (yargs) =>
     yargs
       .option("max-count", {
         alias: "n",
-        describe: "limit to N most recent sessions",
+        describe: t("session.limit_to_n_most_recent_sessions"),
         type: "number",
       })
       .option("format", {
-        describe: "output format",
+        describe: t("session.output_format"),
         type: "string",
         choices: ["table", "json"],
         default: "table",

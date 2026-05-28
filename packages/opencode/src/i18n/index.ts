@@ -21,8 +21,8 @@ export function getLocale(): Locale {
 }
 
 export function t(key: string): string
-export function t(key: string, params?: Record<string, string | number>): string
-export function t(key: string, params?: Record<string, string | number>): string {
+export function t(key: string, params?: Record<string, unknown>): string
+export function t(key: string, params?: Record<string, unknown>): string {
   let text = dict[key]
   if (text === undefined) text = key
   if (params) {

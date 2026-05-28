@@ -11,6 +11,7 @@ import path from "path"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Schema } from "effect"
 import type { InstanceContext } from "@/project/instance-context"
+import { t } from "@/i18n/index"
 
 const decodeMessageInfo = Schema.decodeUnknownSync(MessageV2.Info)
 const decodePart = Schema.decodeUnknownSync(MessageV2.Part)
@@ -81,10 +82,10 @@ type ExportData = { info: SDKSession; messages: Array<{ info: Message; parts: Pa
 
 export const ImportCommand = effectCmd({
   command: "import <file>",
-  describe: "import session data from JSON file or URL",
+  describe: t("import.import_session_data_from_json_file_or_url"),
   builder: (yargs) =>
     yargs.positional("file", {
-      describe: "path to JSON file or share URL",
+      describe: t("import.path_to_json_file_or_share_url"),
       type: "string",
       demandOption: true,
     }),
@@ -107,7 +108,7 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     const slug = parseShareUrl(file)
     if (!slug) {
       const baseUrl = yield* Effect.orDie(share.url())
-      process.stdout.write(`Invalid URL format. Expected: ${baseUrl}/share/<slug>`)
+      process.stdout.write(t("import.invalid_url_format_expected_shareslug", { baseUrl: baseUrl }))
       process.stdout.write(EOL)
       return
     }
@@ -133,19 +134,19 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     }
 
     if (!response.ok) {
-      process.stdout.write(`Failed to fetch share data: ${response.statusText}`)
+      process.stdout.write(t("import.failed_to_fetch_share_data", { response_statusText: response.statusText }))
       process.stdout.write(EOL)
       return
     }
 
     const shareData = yield* Effect.tryPromise({
       try: () => response.json() as Promise<ShareData[]>,
-      catch: () => new CliError({ message: "Share data was not valid JSON" }),
+      catch: () => new CliError({ message: t("import.share_data_was_not_valid_json") }),
     })
     const transformed = transformShareData(shareData)
 
     if (!transformed) {
-      process.stdout.write(`Share not found or empty: ${slug}`)
+      process.stdout.write(t("import.share_not_found_or_empty", { slug: slug }))
       process.stdout.write(EOL)
       return
     }
@@ -156,14 +157,14 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
       | NonNullable<typeof exportData>
       | undefined
     if (!exportData) {
-      process.stdout.write(`File not found: ${file}`)
+      process.stdout.write(t("import.file_not_found", { file: file }))
       process.stdout.write(EOL)
       return
     }
   }
 
   if (!exportData) {
-    process.stdout.write(`Failed to read session data`)
+    process.stdout.write(t("import.failed_to_read_session_data"))
     process.stdout.write(EOL)
     return
   }
@@ -220,6 +221,6 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     }
   }
 
-  process.stdout.write(`Imported session: ${exportData.info.id}`)
+  process.stdout.write(t("import.imported_session", { exportData_info_id: exportData.info.id }))
   process.stdout.write(EOL)
 })

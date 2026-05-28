@@ -17,10 +17,11 @@ import { SnapshotCommand } from "./snapshot"
 import { AgentCommand } from "./agent"
 import { StartupCommand } from "./startup"
 import { V2Command } from "./v2"
+import { t } from "@/i18n/index"
 
 export const DebugCommand = cmd({
   command: "debug",
-  describe: "debugging and troubleshooting tools",
+  describe: t("index.debugging_and_troubleshooting_tools"),
   builder: (yargs) =>
     yargs
       .command(ConfigCommand)
@@ -42,7 +43,7 @@ export const DebugCommand = cmd({
 
 const WaitCommand = effectCmd({
   command: "wait",
-  describe: "wait indefinitely (for debugging)",
+  describe: t("index.wait_indefinitely_for_debugging"),
   handler: Effect.fn("Cli.debug.wait")(function* () {
     yield* Effect.sleep(Duration.days(1))
   }),
@@ -50,7 +51,7 @@ const WaitCommand = effectCmd({
 
 const InfoCommand = effectCmd({
   command: "info",
-  describe: "show debug information",
+  describe: t("index.show_debug_information"),
   handler: Effect.fn("Cli.debug.info")(function* () {
     const config = yield* Config.Service.use((cfg) => cfg.get())
     const termProgram = process.env.TERM_PROGRAM
@@ -58,16 +59,16 @@ const InfoCommand = effectCmd({
       : undefined
     const terminal = [termProgram, process.env.TERM].filter((item): item is string => Boolean(item)).join(" / ")
 
-    console.log(`opencode version: ${InstallationVersion}`)
+    console.log(t("index.opencode_version", { InstallationVersion: InstallationVersion }))
     console.log(`os: ${os.type()} ${os.release()} ${os.arch()}`)
-    console.log(`terminal: ${terminal || "unknown"}`)
-    console.log("plugins:")
+    console.log(t("index.terminal", { terminal_unknown: terminal || "unknown" }))
+    console.log(t("index.plugins"))
     if (Flag.OPENCODE_PURE) {
-      console.log("external plugins disabled (--pure)")
+      console.log(t("index.external_plugins_disabled_pure"))
       return
     }
     if (!config.plugin_origins?.length) {
-      console.log("none")
+      console.log(t("index.none"))
       return
     }
     for (const plugin of config.plugin_origins) {
@@ -78,7 +79,7 @@ const InfoCommand = effectCmd({
 
 const PathsCommand = cmd({
   command: "paths",
-  describe: "show global paths (data, config, cache, state)",
+  describe: t("index.show_global_paths_data_config_cache_state"),
   handler() {
     for (const [key, value] of Object.entries(Global.Path)) {
       console.log(key.padEnd(10), value)

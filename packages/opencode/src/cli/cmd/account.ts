@@ -6,6 +6,7 @@ import { AccountID, OrgID, PollExpired, type PollResult, type AccountError } fro
 import { effectCmd } from "../effect-cmd"
 import * as Prompt from "../effect/prompt"
 import open from "open"
+import { t } from "@/i18n/index"
 
 const openBrowser = (url: string) => Effect.promise(() => open(url).catch(() => undefined))
 
@@ -13,7 +14,7 @@ const println = (msg: string) => Effect.sync(() => UI.println(msg))
 
 const dim = (value: string) => UI.Style.TEXT_DIM + value + UI.Style.TEXT_NORMAL
 
-const activeSuffix = (isActive: boolean) => (isActive ? dim(" (active)") : "")
+const activeSuffix = (isActive: boolean) => (isActive ? dim(t("account.active")) : "")
 
 export const defaultConsoleUrl = "https://console.opencode.ai"
 
@@ -41,15 +42,15 @@ const isActiveOrgChoice = (
 const loginEffect = Effect.fn("login")(function* (url: string) {
   const service = yield* Account.Service
 
-  yield* Prompt.intro("Log in")
+  yield* Prompt.intro(t("account.log_in"))
   const login = yield* service.login(url)
 
-  yield* Prompt.log.info("Go to: " + login.url)
-  yield* Prompt.log.info("Enter code: " + login.user)
+  yield* Prompt.log.info(t("account.go_to") + login.url)
+  yield* Prompt.log.info(t("account.enter_code") + login.user)
   yield* openBrowser(login.url)
 
   const s = Prompt.spinner()
-  yield* s.start("Waiting for authorization...")
+  yield* s.start(t("account.waiting_for_authorization"))
 
   const poll = (wait: Duration.Duration): Effect.Effect<PollResult, AccountError> =>
     Effect.gen(function* () {
@@ -68,34 +69,34 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
   yield* Match.valueTags(result, {
     PollSuccess: (r) =>
       Effect.gen(function* () {
-        yield* s.stop("Logged in as " + r.email)
-        yield* Prompt.outro("Done")
+        yield* s.stop(t("account.logged_in_as") + r.email)
+        yield* Prompt.outro(t("account.done"))
       }),
-    PollExpired: () => s.stop("Device code expired", 1),
-    PollDenied: () => s.stop("Authorization denied", 1),
-    PollError: (r) => s.stop("Error: " + String(r.cause), 1),
-    PollPending: () => s.stop("Unexpected state", 1),
-    PollSlow: () => s.stop("Unexpected state", 1),
+    PollExpired: () => s.stop(t("account.device_code_expired"), 1),
+    PollDenied: () => s.stop(t("account.authorization_denied"), 1),
+    PollError: (r) => s.stop(t("account.error") + String(r.cause), 1),
+    PollPending: () => s.stop(t("account.unexpected_state"), 1),
+    PollSlow: () => s.stop(t("account.unexpected_state"), 1),
   })
 })
 
 const logoutEffect = Effect.fn("logout")(function* (email?: string) {
   const service = yield* Account.Service
   const accounts = yield* service.list()
-  if (accounts.length === 0) return yield* println("Not logged in")
+  if (accounts.length === 0) return yield* println(t("account.not_logged_in"))
 
   if (email) {
     const match = accounts.find((a) => a.email === email)
-    if (!match) return yield* println("Account not found: " + email)
+    if (!match) return yield* println(t("account.account_not_found") + email)
     yield* service.remove(match.id)
-    yield* Prompt.outro("Logged out from " + email)
+    yield* Prompt.outro(t("account.logged_out_from") + email)
     return
   }
 
   const active = yield* service.active()
   const activeID = Option.map(active, (a) => a.id)
 
-  yield* Prompt.intro("Log out")
+  yield* Prompt.intro(t("account.log_out"))
 
   const opts = accounts.map((a) => {
     const isActive = Option.isSome(activeID) && activeID.value === a.id
@@ -105,11 +106,11 @@ const logoutEffect = Effect.fn("logout")(function* (email?: string) {
     }
   })
 
-  const selected = yield* Prompt.select({ message: "Select account to log out", options: opts })
+  const selected = yield* Prompt.select({ message: t("account.select_account_to_log_out"), options: opts })
   if (Option.isNone(selected)) return
 
   yield* service.remove(selected.value.id)
-  yield* Prompt.outro("Logged out from " + selected.value.email)
+  yield* Prompt.outro(t("account.logged_out_from") + selected.value.email)
 })
 
 interface OrgChoice {
@@ -122,7 +123,7 @@ const switchEffect = Effect.fn("switch")(function* () {
   const service = yield* Account.Service
 
   const groups = yield* service.orgsByAccount()
-  if (groups.length === 0) return yield* println("Not logged in")
+  if (groups.length === 0) return yield* println(t("account.not_logged_in"))
 
   const active = yield* service.active()
 
@@ -135,24 +136,24 @@ const switchEffect = Effect.fn("switch")(function* () {
       }
     }),
   )
-  if (opts.length === 0) return yield* println("No orgs found")
+  if (opts.length === 0) return yield* println(t("account.no_orgs_found"))
 
-  yield* Prompt.intro("Switch org")
+  yield* Prompt.intro(t("account.switch_org"))
 
-  const selected = yield* Prompt.select<OrgChoice>({ message: "Select org", options: opts })
+  const selected = yield* Prompt.select<OrgChoice>({ message: t("account.select_org"), options: opts })
   if (Option.isNone(selected)) return
 
   const choice = selected.value
   yield* service.use(choice.accountID, Option.some(choice.orgID))
-  yield* Prompt.outro("Switched to " + choice.label)
+  yield* Prompt.outro(t("account.switched_to") + choice.label)
 })
 
 const orgsEffect = Effect.fn("orgs")(function* () {
   const service = yield* Account.Service
 
   const groups = yield* service.orgsByAccount()
-  if (groups.length === 0) return yield* println("No accounts found")
-  if (!groups.some((group) => group.orgs.length > 0)) return yield* println("No orgs found")
+  if (groups.length === 0) return yield* println(t("account.no_accounts_found"))
+  if (!groups.some((group) => group.orgs.length > 0)) return yield* println(t("account.no_orgs_found"))
 
   const active = yield* service.active()
 
@@ -167,11 +168,11 @@ const orgsEffect = Effect.fn("orgs")(function* () {
 const openEffect = Effect.fn("open")(function* () {
   const service = yield* Account.Service
   const active = yield* service.active()
-  if (Option.isNone(active)) return yield* println("No active account")
+  if (Option.isNone(active)) return yield* println(t("account.no_active_account"))
 
   const url = active.value.url
   yield* openBrowser(url)
-  yield* Prompt.outro("Opened " + url)
+  yield* Prompt.outro(t("account.opened") + url)
 })
 
 export const LoginCommand = effectCmd({
@@ -180,7 +181,7 @@ export const LoginCommand = effectCmd({
   instance: false,
   builder: (yargs) =>
     yargs.positional("url", {
-      describe: "server URL",
+      describe: t("account.server_url"),
       type: "string",
     }),
   handler: Effect.fn("Cli.account.login")(function* (args) {
@@ -195,7 +196,7 @@ export const LogoutCommand = effectCmd({
   instance: false,
   builder: (yargs) =>
     yargs.positional("email", {
-      describe: "account email to log out from",
+      describe: t("account.account_email_to_log_out_from"),
       type: "string",
     }),
   handler: Effect.fn("Cli.account.logout")(function* (args) {
@@ -241,23 +242,23 @@ export const ConsoleCommand = cmd({
     yargs
       .command({
         ...LoginCommand,
-        describe: "log in to console",
+        describe: t("account.log_in_to_console"),
       })
       .command({
         ...LogoutCommand,
-        describe: "log out from console",
+        describe: t("account.log_out_from_console"),
       })
       .command({
         ...SwitchCommand,
-        describe: "switch active org",
+        describe: t("account.switch_active_org"),
       })
       .command({
         ...OrgsCommand,
-        describe: "list orgs",
+        describe: t("account.list_orgs"),
       })
       .command({
         ...OpenCommand,
-        describe: "open active console account",
+        describe: t("account.open_active_console_account"),
       })
       .demandCommand(),
   async handler() {},

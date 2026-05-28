@@ -1,7 +1,8 @@
 import fs from "fs"
 import * as tty from "node:tty"
+import { t } from "@/i18n/index"
 
-export const INTERACTIVE_INPUT_ERROR = "--interactive requires a controlling terminal for input"
+export const INTERACTIVE_INPUT_ERROR = t("runtime.stdin.interactive_requires_a_controlling_terminal_for_in")
 
 type InteractiveStdin = {
   stdin: NodeJS.ReadStream

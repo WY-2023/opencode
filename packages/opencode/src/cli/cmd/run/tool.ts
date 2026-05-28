@@ -36,6 +36,7 @@ import type { WriteTool } from "@/tool/write"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import * as Locale from "@/util/locale"
 import type { RunEntryBody, StreamCommit, ToolSnapshot } from "./types"
+import { t } from "@/i18n/index"
 
 export type ToolView = {
   output: boolean
@@ -241,7 +242,7 @@ function fallbackFinal(ctx: ToolFrame): string {
 
   const time = span(ctx.state)
   if (!time) {
-    return `${ctx.name} completed`
+    return t("tool.completed", { ctx_name: ctx.name })
   }
 
   return `${ctx.name} completed · ${time}`
@@ -273,7 +274,7 @@ export function toolPath(input?: string, opts: { home?: boolean } = {}): string 
 }
 
 function fallbackInline(ctx: ToolFrame): ToolInline {
-  const title = text(ctx.state.title) || (Object.keys(ctx.input).length > 0 ? JSON.stringify(ctx.input) : "Unknown")
+  const title = text(ctx.state.title) || (Object.keys(ctx.input).length > 0 ? JSON.stringify(ctx.input) : t("tool.unknown"))
 
   return {
     icon: "⚙",
@@ -287,7 +288,7 @@ function count(n: number, label: string): string {
 
 function runGlob(p: ToolProps<typeof GlobTool>): ToolInline {
   const root = p.input.path ?? ""
-  const title = `Glob "${p.input.pattern ?? ""}"`
+  const title = t("tool.glob", { p_input_pattern: p.input.pattern ?? "" })
   const suffix = root ? `in ${toolPath(root)}` : ""
   const matches = p.metadata.count
   const description = matches === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${count(matches, "match")}`
@@ -300,7 +301,7 @@ function runGlob(p: ToolProps<typeof GlobTool>): ToolInline {
 
 function runGrep(p: ToolProps<typeof GrepTool>): ToolInline {
   const root = p.input.path ?? ""
-  const title = `Grep "${p.input.pattern ?? ""}"`
+  const title = t("tool.grep", { p_input_pattern: p.input.pattern ?? "" })
   const suffix = root ? `in ${toolPath(root)}` : ""
   const matches = p.metadata.matches
   const description = matches === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${count(matches, "match")}`
@@ -324,7 +325,7 @@ function runRead(p: ToolProps<typeof ReadTool>): ToolInline {
   const description = info(p.frame.input, ["filePath"]) || undefined
   return {
     icon: "→",
-    title: `Read ${file}`,
+    title: t("tool.read", { file: file }),
     ...(description && { description }),
   }
 }
@@ -364,20 +365,20 @@ function runWebSearch(p: ToolProps<typeof WebSearchTool>): ToolInline {
 }
 
 function runTask(p: ToolProps<typeof TaskTool>): ToolInline {
-  const kind = Locale.titlecase(p.input.subagent_type || "unknown")
+  const kind = Locale.titlecase(p.input.subagent_type || t("tool.unknown_1"))
   const desc = p.input.description
   const icon = p.frame.status === "error" ? "✗" : p.frame.status === "running" ? "•" : "✓"
   return {
     icon,
-    title: desc || `${kind} Task`,
-    description: desc ? `${kind} Agent` : undefined,
+    title: desc || t("tool.task", { kind: kind }),
+    description: desc ? t("tool.agent", { kind: kind }) : undefined,
   }
 }
 
 function runTodo(p: ToolProps<typeof TodoWriteTool>): ToolInline {
   return {
     icon: "#",
-    title: "Todos",
+    title: t("tool.todos"),
     mode: "block",
     body: list<{ status?: string; content?: string }>(p.frame.input.todos)
       .flatMap((item) => {
@@ -396,7 +397,7 @@ function runTodo(p: ToolProps<typeof TodoWriteTool>): ToolInline {
 function runSkill(p: ToolProps<typeof SkillTool>): ToolInline {
   return {
     icon: "→",
-    title: `Skill "${p.input.name ?? ""}"`,
+    title: t("tool.skill", { p_input_name: p.input.name ?? "" }),
   }
 }
 
@@ -405,13 +406,13 @@ function runPatch(p: ToolProps<typeof ApplyPatchTool>): ToolInline {
   if (files === 0) {
     return {
       icon: "%",
-      title: "Patch",
+      title: t("tool.patch"),
     }
   }
 
   return {
     icon: "%",
-    title: `Patch ${files} file${files === 1 ? "" : "s"}`,
+    title: t("tool.patch_file", { files: files, files_1_s: files === 1 ? "" : "s" }),
   }
 }
 
@@ -419,14 +420,14 @@ function runQuestion(p: ToolProps<typeof QuestionTool>): ToolInline {
   const total = list(p.frame.input.questions).length
   return {
     icon: "→",
-    title: `Asked ${total} question${total === 1 ? "" : "s"}`,
+    title: t("tool.asked_question", { total: total, total_1_s: total === 1 ? "" : "s" }),
   }
 }
 
 function runInvalid(p: ToolProps<typeof InvalidTool>): ToolInline {
   return {
     icon: "✗",
-    title: text(p.frame.state.title) || "Invalid Tool",
+    title: text(p.frame.state.title) || t("tool.invalid_tool"),
     mode: "block",
     body: p.frame.status === "completed" ? text(p.frame.state.output) : undefined,
   }
@@ -436,7 +437,7 @@ function runBatch(p: ToolProps): ToolInline {
   const calls = list(dict(p.input).tool_calls).length
   return {
     icon: "#",
-    title: text(p.frame.state.title) || (calls > 0 ? `Batch ${calls} tool${calls === 1 ? "" : "s"}` : "Batch"),
+    title: text(p.frame.state.title) || (calls > 0 ? t("tool.batch_tool", { calls: calls, calls_1_s: calls === 1 ? "" : "s" }) : "Batch"),
     mode: "block",
     body: p.frame.status === "completed" ? text(p.frame.state.output) : undefined,
   }
@@ -473,7 +474,7 @@ function runLsp(p: ToolProps<typeof LspTool>): ToolInline {
 function runPlanExit(p: ToolProps<typeof PlanExitTool>): ToolInline {
   return {
     icon: "→",
-    title: text(p.frame.state.title) || "Switching to build agent",
+    title: text(p.frame.state.title) || t("tool.switching_to_build_agent"),
     mode: "block",
     body: p.frame.status === "completed" ? text(p.frame.state.output) : undefined,
   }
@@ -576,7 +577,7 @@ function snapTask(p: ToolProps<typeof TaskTool>): ToolSnapshot {
 
   return {
     kind: "task",
-    title: `# ${kind} Task`,
+    title: t("tool.task_1", { kind: kind }),
     rows,
     tail: "",
   }
@@ -609,8 +610,8 @@ function snapQuestion(p: ToolProps<typeof QuestionTool>): ToolSnapshot {
   const items = list<{ question?: string }>(p.frame.input.questions).map((item, i) => {
     const answer = list<string>(answers[i]).filter((entry) => typeof entry === "string")
     return {
-      question: item.question || `Question ${i + 1}`,
-      answer: answer.length > 0 ? answer.join(", ") : "(no answer)",
+      question: item.question || t("tool.question", { i_1: i + 1 }),
+      answer: answer.length > 0 ? answer.join(t("tool.unnamed")) : "(no answer)",
     }
   })
 
@@ -630,7 +631,7 @@ function scrollBashStart(p: ToolProps<typeof BashTool>): string {
     return `$ ${cmd}`
   }
 
-  const title = dir && !desc.includes(dir) ? `${desc} in ${dir}` : desc
+  const title = dir && !desc.includes(dir) ? t("tool.in", { desc: desc, dir: dir }) : desc
 
   if (!cmd) {
     return `# ${title}`
@@ -677,10 +678,10 @@ function scrollBashFinal(p: ToolProps<typeof BashTool>): string {
   const time = span(p.frame.state)
   if (code === undefined) {
     if (!time) {
-      return "bash completed"
+      return t("tool.bash_completed")
     }
 
-    return `bash completed · ${time}`
+    return t("tool.bash_completed_1", { time: time })
   }
 
   return `bash completed (exit ${code})${time ? ` · ${time}` : ""}`
@@ -734,7 +735,7 @@ function scrollPatchFinal(p: ToolProps<typeof ApplyPatchTool>): string {
   if (files.length === 0) {
     const time = span(p.frame.state)
     if (!time) {
-      return "patch"
+      return t("tool.patch_1")
     }
 
     return `patch · ${time}`
@@ -744,7 +745,7 @@ function scrollPatchFinal(p: ToolProps<typeof ApplyPatchTool>): string {
   const shown = files.filter((file) => show_updates || file.type !== "update")
   const rows = shown.slice(0, 6).map(patchLine)
   if (shown.length > 6) {
-    rows.push(`... and ${shown.length - 6} more`)
+    rows.push(t("tool.and_more", { shown_length_6: shown.length - 6 }))
   }
 
   if (rows.length > 0) {
@@ -784,10 +785,10 @@ function scrollTaskFinal(p: ToolProps<typeof TaskTool>): string {
   const kind = Locale.titlecase(p.input.subagent_type || "general")
   const row = p.input.description || text(p.frame.state.title)
   if (!row) {
-    return `# ${kind} Task`
+    return t("tool.task_2", { kind: kind })
   }
 
-  return `# ${kind} Task\n${row}`
+  return t("tool.taskn", { kind: kind, row: row })
 }
 
 function scrollTodoStart(_: ToolProps<typeof TodoWriteTool>): string {
@@ -799,7 +800,7 @@ function scrollTodoFinal(p: ToolProps<typeof TodoWriteTool>): string {
   const time = span(p.frame.state)
   if (items.length === 0) {
     if (!time) {
-      return "0 todos"
+      return t("tool.0_todos")
     }
 
     return `0 todos · ${time}`
@@ -808,15 +809,15 @@ function scrollTodoFinal(p: ToolProps<typeof TodoWriteTool>): string {
   const doneN = items.filter((item) => item.status === "completed").length
   const runN = items.filter((item) => item.status === "in_progress").length
   const left = items.length - doneN - runN
-  const tail = [`${items.length} total`]
+  const tail = [t("tool.total", { items_length: items.length })]
   if (doneN > 0) {
-    tail.push(`${doneN} done`)
+    tail.push(t("tool.done", { doneN: doneN }))
   }
   if (runN > 0) {
-    tail.push(`${runN} active`)
+    tail.push(t("tool.active", { runN: runN }))
   }
   if (left > 0) {
-    tail.push(`${left} pending`)
+    tail.push(t("tool.pending", { left: left }))
   }
 
   if (time) {
@@ -836,7 +837,7 @@ function scrollQuestionFinal(p: ToolProps<typeof QuestionTool>): string {
   const time = span(p.frame.state)
   if (q.length === 0) {
     if (!time) {
-      return "0 questions"
+      return t("tool.0_questions")
     }
 
     return `0 questions · ${time}`
@@ -851,7 +852,7 @@ function scrollQuestionFinal(p: ToolProps<typeof QuestionTool>): string {
   }
 
   if (q.length > 4) {
-    rows.push(`... and ${q.length - 4} more`)
+    rows.push(t("tool.and_more_1", { q_length_4: q.length - 4 }))
   }
 
   return rows.join("\n")
@@ -944,8 +945,8 @@ function permGlob(p: ToolPermissionProps<typeof GlobTool>): ToolPermissionInfo {
   const pattern = p.input.pattern || p.patterns[0] || ""
   return {
     icon: "✱",
-    title: `Glob "${pattern}"`,
-    lines: pattern ? [`Pattern: ${pattern}`] : [],
+    title: t("tool.glob_1", { pattern: pattern }),
+    lines: pattern ? [t("tool.pattern", { pattern: pattern })] : [],
   }
 }
 
@@ -953,8 +954,8 @@ function permGrep(p: ToolPermissionProps<typeof GrepTool>): ToolPermissionInfo {
   const pattern = p.input.pattern || p.patterns[0] || ""
   return {
     icon: "✱",
-    title: `Grep "${pattern}"`,
-    lines: pattern ? [`Pattern: ${pattern}`] : [],
+    title: t("tool.grep_1", { pattern: pattern }),
+    lines: pattern ? [t("tool.pattern_1", { pattern: pattern })] : [],
   }
 }
 
@@ -968,7 +969,7 @@ function permList(p: ToolPermissionProps): ToolPermissionInfo {
 }
 
 function permBash(p: ToolPermissionProps<typeof BashTool>): ToolPermissionInfo {
-  const title = p.input.description || "Shell command"
+  const title = p.input.description || t("tool.shell_command")
   const cmd = p.input.command || ""
   return {
     icon: "#",
@@ -992,7 +993,7 @@ function permWebfetch(p: ToolPermissionProps<typeof WebFetchTool>): ToolPermissi
   return {
     icon: "%",
     title: `WebFetch ${url}`,
-    lines: url ? [`URL: ${url}`] : [],
+    lines: url ? [t("tool.url", { url: url })] : [],
   }
 }
 
@@ -1002,7 +1003,7 @@ function permWebSearch(p: ToolPermissionProps<typeof WebSearchTool>): ToolPermis
   return {
     icon: "◈",
     title: query ? `${title} "${query}"` : title,
-    lines: query ? [`Query: ${query}`] : [],
+    lines: query ? [t("tool.query", { query: query })] : [],
   }
 }
 
@@ -1015,9 +1016,9 @@ function permLsp(p: ToolPermissionProps<typeof LspTool>): ToolPermissionInfo {
     icon: "→",
     title: lspTitle(p.input, { home: true }),
     lines: [
-      ...(p.input.operation ? [`Operation: ${p.input.operation}`] : []),
+      ...(p.input.operation ? [t("tool.operation", { p_input_operation: p.input.operation })] : []),
       ...(file ? [`Path: ${toolPath(file, { home: true })}`] : []),
-      ...(pos ? [`Position: ${pos}`] : []),
+      ...(pos ? [t("tool.position", { pos: pos })] : []),
     ],
   }
 }

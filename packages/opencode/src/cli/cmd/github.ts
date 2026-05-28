@@ -34,6 +34,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { Process } from "@/util/process"
 import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
+import { t } from "@/i18n/index"
 
 type GitHubAuthor = {
   login: string
@@ -183,14 +184,14 @@ export function formatPromptTooLargeError(files: { filename: string; content: st
 
 export const GithubCommand = cmd({
   command: "github",
-  describe: "manage GitHub agent",
+  describe: t("github.manage_github_agent"),
   builder: (yargs) => yargs.command(GithubInstallCommand).command(GithubRunCommand).demandCommand(),
   async handler() {},
 })
 
 export const GithubInstallCommand = effectCmd({
   command: "install",
-  describe: "install the GitHub agent",
+  describe: t("github.install_the_github_agent"),
   handler: Effect.fn("Cli.github.install")(function* () {
     const maybeCtx = yield* InstanceRef
     if (!maybeCtx) return yield* Effect.die("InstanceRef not provided")
@@ -200,7 +201,7 @@ export const GithubInstallCommand = effectCmd({
     yield* Effect.promise(async () => {
       {
         UI.empty()
-        prompts.intro("Install GitHub agent")
+        prompts.intro(t("github.install_github_agent"))
         const app = await getAppInfo()
         await installGitHubApp()
 
@@ -221,10 +222,10 @@ export const GithubInstallCommand = effectCmd({
           let step2
           if (provider === "amazon-bedrock") {
             step2 =
-              "Configure OIDC in AWS - https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services"
+              t("github.configure_oidc_in_aws_httpsdocsgithubcomenactionsh")
           } else {
             step2 = [
-              `    2. Add the following secrets in org or repo (${app.owner}/${app.repo}) settings`,
+              t("github.2_add_the_following_secrets_in_org_or_repo_setting", { app_owner: app.owner, app_repo: app.repo }),
               "",
               ...providers[provider].env.map((e) => `       - ${e}`),
             ].join("\n")
@@ -232,14 +233,14 @@ export const GithubInstallCommand = effectCmd({
 
           prompts.outro(
             [
-              "Next steps:",
+              t("github.next_steps"),
               "",
-              `    1. Commit the \`${WORKFLOW_FILE}\` file and push`,
+              t("github.1_commit_the_file_and_push", { WORKFLOW_FILE: WORKFLOW_FILE }),
               step2,
               "",
-              "    3. Go to a GitHub issue and comment `/oc summarize` to see the agent in action",
+              t("github.3_go_to_a_github_issue_and_comment_oc_summarize_to"),
               "",
-              "   Learn more about the GitHub agent - https://opencode.ai/docs/github/#usage-examples",
+              t("github.learn_more_about_the_github_agent_httpsopencodeaid"),
             ].join("\n"),
           )
         }
@@ -247,7 +248,7 @@ export const GithubInstallCommand = effectCmd({
         async function getAppInfo() {
           const project = ctx.project
           if (project.vcs !== "git") {
-            prompts.log.error(`Could not find git repository. Please run this command from a git repository.`)
+            prompts.log.error(t("github.could_not_find_git_repository_please_run_this_comm"))
             throw new UI.CancelledError()
           }
 
@@ -257,7 +258,7 @@ export const GithubInstallCommand = effectCmd({
           )
           const parsed = parseGitHubRemote(info)
           if (!parsed) {
-            prompts.log.error(`Could not find git repository. Please run this command from a git repository.`)
+            prompts.log.error(t("github.could_not_find_git_repository_please_run_this_comm"))
             throw new UI.CancelledError()
           }
           return { owner: parsed.owner, repo: parsed.repo, root: ctx.worktree }
@@ -271,7 +272,7 @@ export const GithubInstallCommand = effectCmd({
             google: 3,
           }
           let provider = await prompts.select({
-            message: "Select provider",
+            message: t("github.select_provider"),
             maxItems: 8,
             options: pipe(
               providers,
@@ -283,7 +284,7 @@ export const GithubInstallCommand = effectCmd({
               map((x) => ({
                 label: x.name,
                 value: x.id,
-                hint: priority[x.id] === 0 ? "recommended" : undefined,
+                hint: priority[x.id] === 0 ? t("github.recommended") : undefined,
               })),
             ),
           })
@@ -297,7 +298,7 @@ export const GithubInstallCommand = effectCmd({
           const providerData = providers[provider]!
 
           const model = await prompts.select({
-            message: "Select model",
+            message: t("github.select_model"),
             maxItems: 8,
             options: pipe(
               providerData.models,
@@ -316,11 +317,11 @@ export const GithubInstallCommand = effectCmd({
 
         async function installGitHubApp() {
           const s = prompts.spinner()
-          s.start("Installing GitHub app")
+          s.start(t("github.installing_github_app"))
 
           // Get installation
           const installation = await getInstallation()
-          if (installation) return s.stop("GitHub app already installed")
+          if (installation) return s.stop(t("github.github_app_already_installed"))
 
           // Open browser
           const url = "https://github.com/apps/opencode-agent"
@@ -333,12 +334,12 @@ export const GithubInstallCommand = effectCmd({
 
           exec(command, (error) => {
             if (error) {
-              prompts.log.warn(`Could not open browser. Please visit: ${url}`)
+              prompts.log.warn(t("github.could_not_open_browser_please_visit", { url: url }))
             }
           })
 
           // Wait for installation
-          s.message("Waiting for GitHub app to be installed")
+          s.message(t("github.waiting_for_github_app_to_be_installed"))
           const MAX_RETRIES = 120
           let retries = 0
           do {
@@ -347,7 +348,7 @@ export const GithubInstallCommand = effectCmd({
 
             if (retries > MAX_RETRIES) {
               s.stop(
-                `Failed to detect GitHub app installation. Make sure to install the app for the \`${app.owner}/${app.repo}\` repository.`,
+                t("github.failed_to_detect_github_app_installation_make_sure", { app_owner: app.owner, app_repo: app.repo }),
               )
               throw new UI.CancelledError()
             }
@@ -356,7 +357,7 @@ export const GithubInstallCommand = effectCmd({
             await sleep(1000)
           } while (true) // oxlint-disable-line no-constant-condition
 
-          s.stop("Installed GitHub app")
+          s.stop(t("github.installed_github_app"))
 
           async function getInstallation() {
             return await fetch(
@@ -408,7 +409,7 @@ jobs:
           model: ${provider}/${model}`,
           )
 
-          prompts.log.success(`Added workflow file: "${WORKFLOW_FILE}"`)
+          prompts.log.success(t("github.added_workflow_file", { WORKFLOW_FILE: WORKFLOW_FILE }))
         }
       }
     })
@@ -417,16 +418,16 @@ jobs:
 
 export const GithubRunCommand = effectCmd({
   command: "run",
-  describe: "run the GitHub agent",
+  describe: t("github.run_the_github_agent"),
   builder: (yargs) =>
     yargs
       .option("event", {
         type: "string",
-        describe: "GitHub mock event to run the agent for",
+        describe: t("github.github_mock_event_to_run_the_agent_for"),
       })
       .option("token", {
         type: "string",
-        describe: "GitHub personal access token (github_pat_********)",
+        describe: t("github.github_personal_access_token_githubpat"),
       }),
   handler: Effect.fn("Cli.github.run")(function* (args) {
     const ctx = yield* InstanceRef
@@ -443,7 +444,7 @@ export const GithubRunCommand = effectCmd({
 
       const context = isMock ? (JSON.parse(args.event!) as Context) : github.context
       if (!SUPPORTED_EVENTS.includes(context.eventName as (typeof SUPPORTED_EVENTS)[number])) {
-        core.setFailed(`Unsupported event type: ${context.eventName}`)
+        core.setFailed(t("github.unsupported_event_type", { context_eventName: context.eventName }))
         process.exit(1)
       }
 
@@ -569,7 +570,7 @@ export const GithubRunCommand = effectCmd({
           await runLocalEffect(sessionShare.share(session.id))
           return session.id.slice(-8)
         })()
-        console.log("opencode session", session.id)
+        console.log(t("github.opencode_session"), session.id)
 
         // Handle event types:
         // REPO_EVENTS (schedule, workflow_dispatch): no issue/PR context, output to logs/PR only
@@ -578,7 +579,7 @@ export const GithubRunCommand = effectCmd({
         if (isRepoEvent) {
           // Repo event - no issue/PR context, output goes to logs
           if (isWorkflowDispatchEvent && actor) {
-            console.log(`Triggered by: ${actor}`)
+            console.log(t("github.triggered_by", { actor: actor }))
           }
           const branchPrefix = isWorkflowDispatchEvent ? "dispatch" : "schedule"
           const branch = await checkoutNewBranch(branchPrefix)
@@ -587,8 +588,8 @@ export const GithubRunCommand = effectCmd({
           const { dirty, uncommittedChanges, switched } = await branchIsDirty(head, branch)
           if (switched) {
             // Agent switched branches (likely created its own branch/PR)
-            console.log("Agent managed its own branch, skipping infrastructure push/PR")
-            console.log("Response:", response)
+            console.log(t("github.agent_managed_its_own_branch_skipping_infrastructu"))
+            console.log(t("github.response"), response)
           } else if (dirty) {
             const summary = await summarize(response)
             // workflow_dispatch has an actor for co-author attribution, schedule does not
@@ -601,12 +602,12 @@ export const GithubRunCommand = effectCmd({
               `${response}\n\nTriggered by ${triggerType}${footer({ image: true })}`,
             )
             if (pr) {
-              console.log(`Created PR #${pr}`)
+              console.log(t("github.created_pr", { pr: pr }))
             } else {
-              console.log("Skipped PR creation (no new commits)")
+              console.log(t("github.skipped_pr_creation_no_new_commits"))
             }
           } else {
-            console.log("Response:", response)
+            console.log(t("github.response"), response)
           }
         } else if (
           ["pull_request", "pull_request_review_comment"].includes(context.eventName) ||
@@ -621,7 +622,7 @@ export const GithubRunCommand = effectCmd({
             const response = await chat(`${userPrompt}\n\n${dataPrompt}`, promptFiles)
             const { dirty, uncommittedChanges, switched } = await branchIsDirty(head, prData.headRefName)
             if (switched) {
-              console.log("Agent managed its own branch, skipping infrastructure push")
+              console.log(t("github.agent_managed_its_own_branch_skipping_infrastructu_1"))
             }
             if (dirty && !switched) {
               const summary = await summarize(response)
@@ -639,7 +640,7 @@ export const GithubRunCommand = effectCmd({
             const response = await chat(`${userPrompt}\n\n${dataPrompt}`, promptFiles)
             const { dirty, uncommittedChanges, switched } = await branchIsDirty(head, forkBranch)
             if (switched) {
-              console.log("Agent managed its own branch, skipping infrastructure push")
+              console.log(t("github.agent_managed_its_own_branch_skipping_infrastructu_2"))
             }
             if (dirty && !switched) {
               const summary = await summarize(response)
@@ -709,18 +710,18 @@ export const GithubRunCommand = effectCmd({
 
       function normalizeModel() {
         const value = process.env["MODEL"]
-        if (!value) throw new Error(`Environment variable "MODEL" is not set`)
+        if (!value) throw new Error(t("github.environment_variable_model_is_not_set"))
 
         const { providerID, modelID } = Provider.parseModel(value)
 
         if (!providerID.length || !modelID.length)
-          throw new Error(`Invalid model ${value}. Model must be in the format "provider/model".`)
+          throw new Error(t("github.invalid_model_model_must_be_in_the_format_provider", { value: value }))
         return { providerID, modelID }
       }
 
       function normalizeRunId() {
         const value = process.env["GITHUB_RUN_ID"]
-        if (!value) throw new Error(`Environment variable "GITHUB_RUN_ID" is not set`)
+        if (!value) throw new Error(t("github.environment_variable_githubrunid_is_not_set"))
         return value
       }
 
@@ -729,7 +730,7 @@ export const GithubRunCommand = effectCmd({
         if (!value) return undefined
         if (value === "true") return true
         if (value === "false") return false
-        throw new Error(`Invalid share value: ${value}. Share must be a boolean.`)
+        throw new Error(t("github.invalid_share_value_share_must_be_a_boolean", { value: value }))
       }
 
       function normalizeUseGithubToken() {
@@ -737,7 +738,7 @@ export const GithubRunCommand = effectCmd({
         if (!value) return false
         if (value === "true") return true
         if (value === "false") return false
-        throw new Error(`Invalid use_github_token value: ${value}. Must be a boolean.`)
+        throw new Error(t("github.invalid_usegithubtoken_value_must_be_a_boolean", { value: value }))
       }
 
       function normalizeOidcBaseUrl(): string {
@@ -780,8 +781,8 @@ export const GithubRunCommand = effectCmd({
         // For repo events and issues events, PROMPT is required since there's no comment to extract from
         if (isRepoEvent || isIssuesEvent) {
           if (!customPrompt) {
-            const eventType = isRepoEvent ? "scheduled and workflow_dispatch" : "issues"
-            throw new Error(`PROMPT input is required for ${eventType} events`)
+            const eventType = isRepoEvent ? t("github.scheduled_and_workflowdispatch") : "issues"
+            throw new Error(t("github.prompt_input_is_required_for_events", { eventType: eventType }))
           }
           return { userPrompt: customPrompt, promptFiles: [] }
         }
@@ -797,19 +798,19 @@ export const GithubRunCommand = effectCmd({
           .filter(Boolean)
         let prompt = (() => {
           if (!isCommentEvent) {
-            return "Review this pull request"
+            return t("github.review_this_pull_request")
           }
           const body = (payload as IssueCommentEvent | PullRequestReviewCommentEvent).comment.body.trim()
           const bodyLower = body.toLowerCase()
           if (mentions.some((m) => bodyLower === m)) {
             if (reviewContext) {
-              return `Review this code change and suggest improvements for the commented lines:\n\nFile: ${reviewContext.file}\nLines: ${reviewContext.line}\n\n${reviewContext.diffHunk}`
+              return t("github.review_this_code_change_and_suggest_improvements_f", { reviewContext_file: reviewContext.file, reviewContext_line: reviewContext.line, reviewContext_diffHunk: reviewContext.diffHunk })
             }
-            return "Summarize this thread"
+            return t("github.summarize_this_thread")
           }
           if (mentions.some((m) => bodyLower.includes(m))) {
             if (reviewContext) {
-              return `${body}\n\nContext: You are reviewing a comment on file "${reviewContext.file}" at line ${reviewContext.line}.\n\nDiff context:\n${reviewContext.diffHunk}`
+              return t("github.nncontext_you_are_reviewing_a_comment_on_file_at_l", { body: body, reviewContext_file: reviewContext.file, reviewContext_line: reviewContext.line, reviewContext_diffHunk: reviewContext.diffHunk })
             }
             return body
           }
@@ -833,7 +834,7 @@ export const GithubRunCommand = effectCmd({
         const mdMatches = prompt.matchAll(/!?\[.*?\]\((https:\/\/github\.com\/user-attachments\/[^)]+)\)/gi)
         const tagMatches = prompt.matchAll(/<img .*?src="(https:\/\/github\.com\/user-attachments\/[^"]+)" \/>/gi)
         const matches = [...mdMatches, ...tagMatches].sort((a, b) => a.index - b.index)
-        console.log("Images", JSON.stringify(matches, null, 2))
+        console.log(t("github.images"), JSON.stringify(matches, null, 2))
 
         let offset = 0
         for (const m of matches) {
@@ -850,7 +851,7 @@ export const GithubRunCommand = effectCmd({
             },
           })
           if (!res.ok) {
-            console.error(`Failed to download image: ${url}`)
+            console.error(t("github.failed_to_download_image", { url: url }))
             continue
           }
 
@@ -907,7 +908,7 @@ export const GithubRunCommand = effectCmd({
               const title =
                 part.state.title || Object.keys(part.state.input).length > 0
                   ? JSON.stringify(part.state.input)
-                  : "Unknown"
+                  : t("github.unknown")
               console.log()
               printEvent(color, tool, title)
             }
@@ -929,17 +930,17 @@ export const GithubRunCommand = effectCmd({
 
       async function summarize(response: string) {
         try {
-          return await chat(`Summarize the following in less than 40 characters:\n\n${response}`)
+          return await chat(t("github.summarize_the_following_in_less_than_40_characters", { response: response }))
         } catch {
           const title = issueEvent
             ? issueEvent.issue.title
             : (payload as PullRequestReviewCommentEvent).pull_request.title
-          return `Fix issue: ${title}`
+          return t("github.fix_issue", { title: title })
         }
       }
 
       async function chat(message: string, files: PromptFiles = []) {
-        console.log("Sending message to opencode...")
+        console.log(t("github.sending_message_to_opencode"))
 
         return runLocalEffect(
           Effect.gen(function* () {
@@ -982,7 +983,7 @@ export const GithubRunCommand = effectCmd({
 
             if (result.info.role === "assistant" && result.info.error) {
               const err = result.info.error
-              console.error("Agent error:", err)
+              console.error(t("github.agent_error"), err)
               if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
               const message = "message" in err.data ? err.data.message : ""
               throw new Error(`${err.name}: ${message}`)
@@ -991,7 +992,7 @@ export const GithubRunCommand = effectCmd({
             const text = extractResponseText(result.parts)
             if (text) return text
 
-            console.log("Requesting summary from agent...")
+            console.log(t("github.requesting_summary_from_agent"))
             const summary = yield* prompt.prompt({
               sessionID: session.id,
               messageID: MessageID.ascending(),
@@ -1005,21 +1006,21 @@ export const GithubRunCommand = effectCmd({
                 {
                   id: PartID.ascending(),
                   type: "text",
-                  text: "Summarize the actions (tool calls & reasoning) you did for the user in 1-2 sentences.",
+                  text: t("github.summarize_the_actions_tool_calls_reasoning_you_did"),
                 },
               ],
             })
 
             if (summary.info.role === "assistant" && summary.info.error) {
               const err = summary.info.error
-              console.error("Summary agent error:", err)
+              console.error(t("github.summary_agent_error"), err)
               if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
               const message = "message" in err.data ? err.data.message : ""
               throw new Error(`${err.name}: ${message}`)
             }
 
             const summaryText = extractResponseText(summary.parts)
-            if (!summaryText) throw new Error("Failed to get summary from agent")
+            if (!summaryText) throw new Error(t("github.failed_to_get_summary_from_agent"))
             return summaryText
           }),
         )
@@ -1029,9 +1030,9 @@ export const GithubRunCommand = effectCmd({
         try {
           return await core.getIDToken("opencode-github-action")
         } catch (error) {
-          console.error("Failed to get OIDC token:", error instanceof Error ? error.message : error)
+          console.error(t("github.failed_to_get_oidc_token"), error instanceof Error ? error.message : error)
           throw new Error(
-            "Could not fetch an OIDC token. Make sure to add `id-token: write` to your workflow permissions.",
+            t("github.could_not_fetch_an_oidc_token_make_sure_to_add_id"),
             { cause: error },
           )
         }
@@ -1056,7 +1057,7 @@ export const GithubRunCommand = effectCmd({
         if (!response.ok) {
           const responseJson = (await response.json()) as { error?: string }
           throw new Error(
-            `App token exchange failed: ${response.status} ${response.statusText} - ${responseJson.error}`,
+            t("github.app_token_exchange_failed", { response_status: response.status, response_statusText: response.statusText, responseJson_error: responseJson.error }),
           )
         }
 
@@ -1068,7 +1069,7 @@ export const GithubRunCommand = effectCmd({
         // Do not change git config when running locally
         if (isMock) return
 
-        console.log("Configuring git...")
+        console.log(t("github.configuring_git"))
         const config = "http.https://github.com/.extraheader"
         // actions/checkout@v6 no longer stores credentials in .git/config,
         // so this may not exist - use nothrow() to handle gracefully
@@ -1092,14 +1093,14 @@ export const GithubRunCommand = effectCmd({
       }
 
       async function checkoutNewBranch(type: "issue" | "schedule" | "dispatch") {
-        console.log("Checking out new branch...")
+        console.log(t("github.checking_out_new_branch"))
         const branch = generateBranchName(type)
         await gitRun(["checkout", "-b", branch])
         return branch
       }
 
       async function checkoutLocalBranch(pr: GitHubPullRequest) {
-        console.log("Checking out local branch...")
+        console.log(t("github.checking_out_local_branch"))
 
         const branch = pr.headRefName
         const depth = Math.max(pr.commits.totalCount, 20)
@@ -1109,7 +1110,7 @@ export const GithubRunCommand = effectCmd({
       }
 
       async function checkoutForkBranch(pr: GitHubPullRequest) {
-        console.log("Checking out fork branch...")
+        console.log(t("github.checking_out_fork_branch"))
 
         const remoteBranch = pr.headRefName
         const localBranch = generateBranchName("pr")
@@ -1136,7 +1137,7 @@ export const GithubRunCommand = effectCmd({
       }
 
       async function pushToNewBranch(summary: string, branch: string, commit: boolean, isSchedule: boolean) {
-        console.log("Pushing to new branch...")
+        console.log(t("github.pushing_to_new_branch"))
         if (commit) {
           await gitRun(["add", "."])
           if (isSchedule) {
@@ -1149,7 +1150,7 @@ export const GithubRunCommand = effectCmd({
       }
 
       async function pushToLocalBranch(summary: string, commit: boolean) {
-        console.log("Pushing to local branch...")
+        console.log(t("github.pushing_to_local_branch"))
         if (commit) {
           await gitRun(["add", "."])
           await commitChanges(summary, actor)
@@ -1158,7 +1159,7 @@ export const GithubRunCommand = effectCmd({
       }
 
       async function pushToForkBranch(summary: string, pr: GitHubPullRequest, commit: boolean) {
-        console.log("Pushing to fork branch...")
+        console.log(t("github.pushing_to_fork_branch"))
 
         const remoteBranch = pr.headRefName
 
@@ -1170,12 +1171,12 @@ export const GithubRunCommand = effectCmd({
       }
 
       async function branchIsDirty(originalHead: string, expectedBranch: string) {
-        console.log("Checking if branch is dirty...")
+        console.log(t("github.checking_if_branch_is_dirty"))
         // Detect if the agent switched branches during chat (e.g. created
         // its own branch, committed, and possibly pushed/created a PR).
         const current = await gitText(["rev-parse", "--abbrev-ref", "HEAD"])
         if (current !== expectedBranch) {
-          console.log(`Branch changed during chat: expected ${expectedBranch}, now on ${current}`)
+          console.log(t("github.branch_changed_during_chat_expected_now_on", { expectedBranch: expectedBranch, current: current }))
           return { dirty: true, uncommittedChanges: false, switched: true }
         }
 
@@ -1198,7 +1199,7 @@ export const GithubRunCommand = effectCmd({
       async function hasNewCommits(base: string, head: string) {
         const result = await gitStatus(["rev-list", "--count", `${base}..${head}`])
         if (result.exitCode !== 0) {
-          console.log(`rev-list failed, fetching origin/${base}...`)
+          console.log(t("github.rev_list_failed_fetching_origin", { base: base }))
           await gitStatus(["fetch", "origin", base, "--depth=1"])
           const retry = await gitStatus(["rev-list", "--count", `origin/${base}..${head}`])
           if (retry.exitCode !== 0) return true // assume dirty if we can't tell
@@ -1209,7 +1210,7 @@ export const GithubRunCommand = effectCmd({
 
       async function assertPermissions() {
         // Only called for non-schedule events, so actor is defined
-        console.log(`Asserting permissions for user ${actor}...`)
+        console.log(t("github.asserting_permissions_for_user", { actor: actor }))
 
         let permission
         try {
@@ -1220,18 +1221,18 @@ export const GithubRunCommand = effectCmd({
           })
 
           permission = response.data.permission
-          console.log(`  permission: ${permission}`)
+          console.log(t("github.permission", { permission: permission }))
         } catch (error) {
-          console.error(`Failed to check permissions: ${error}`)
-          throw new Error(`Failed to check permissions for user ${actor}: ${error}`, { cause: error })
+          console.error(t("github.failed_to_check_permissions", { error: error }))
+          throw new Error(t("github.failed_to_check_permissions_for_user", { actor: actor, error: error }), { cause: error })
         }
 
-        if (!["admin", "write"].includes(permission)) throw new Error(`User ${actor} does not have write permissions`)
+        if (![t("github.admin"), "write"].includes(permission)) throw new Error(`User ${actor} does not have write permissions`)
       }
 
       async function addReaction(commentType?: "issue" | "pr_review") {
         // Only called for non-schedule events, so triggerCommentId is defined
-        console.log("Adding reaction...")
+        console.log(t("github.adding_reaction"))
         if (triggerCommentId) {
           if (commentType === "pr_review") {
             return await octoRest.rest.reactions.createForPullRequestReviewComment({
@@ -1258,7 +1259,7 @@ export const GithubRunCommand = effectCmd({
 
       async function removeReaction(commentType?: "issue" | "pr_review") {
         // Only called for non-schedule events, so triggerCommentId is defined
-        console.log("Removing reaction...")
+        console.log(t("github.removing_reaction"))
         if (triggerCommentId) {
           if (commentType === "pr_review") {
             const reactions = await octoRest.rest.reactions.listForPullRequestReviewComment({
@@ -1317,7 +1318,7 @@ export const GithubRunCommand = effectCmd({
 
       async function createComment(body: string) {
         // Only called for non-schedule events, so issueId is defined
-        console.log("Creating comment...")
+        console.log(t("github.creating_comment"))
         return await octoRest.rest.issues.createComment({
           owner,
           repo,
@@ -1327,7 +1328,7 @@ export const GithubRunCommand = effectCmd({
       }
 
       async function createPR(base: string, branch: string, title: string, body: string): Promise<number | null> {
-        console.log("Creating pull request...")
+        console.log(t("github.creating_pull_request"))
 
         // Check if an open PR already exists for this head→base combination
         // This handles the case where the agent created a PR via gh pr create during its run
@@ -1343,19 +1344,19 @@ export const GithubRunCommand = effectCmd({
           )
 
           if (existing.data.length > 0) {
-            console.log(`PR #${existing.data[0].number} already exists for branch ${branch}`)
+            console.log(t("github.pr_already_exists_for_branch", { existing_data_0_number: existing.data[0].number, branch: branch }))
             return existing.data[0].number
           }
         } catch (e) {
           // If the check fails, proceed to create - we'll get a clear error if a PR already exists
-          console.log(`Failed to check for existing PR: ${e}`)
+          console.log(t("github.failed_to_check_for_existing_pr", { e: e }))
         }
 
         // Verify there are commits between base and head before creating the PR.
         // In shallow clones, the branch can appear dirty but share the same
         // commit as the base, causing a 422 from GitHub.
         if (!(await hasNewCommits(base, branch))) {
-          console.log(`No commits between ${base} and ${branch}, skipping PR creation`)
+          console.log(t("github.no_commits_between_and_skipping_pr_creation", { base: base, branch: branch }))
           return null
         }
 
@@ -1376,7 +1377,7 @@ export const GithubRunCommand = effectCmd({
           // This can happen when the branch was pushed but has no new commits
           // relative to the base (e.g. shallow clone edge cases).
           if (e instanceof Error && e.message.includes("No commits between")) {
-            console.log(`GitHub rejected PR: ${e.message}`)
+            console.log(t("github.github_rejected_pr", { e_message: e.message }))
             return null
           }
           throw e
@@ -1388,7 +1389,7 @@ export const GithubRunCommand = effectCmd({
           return await fn()
         } catch (e) {
           if (retries > 0) {
-            console.log(`Retrying after ${delayMs}ms...`)
+            console.log(t("github.retrying_after_ms", { delayMs: delayMs }))
             await sleep(delayMs)
             return withRetry(fn, retries - 1, delayMs)
           }
@@ -1415,7 +1416,7 @@ export const GithubRunCommand = effectCmd({
       }
 
       async function fetchIssue() {
-        console.log("Fetching prompt data for issue...")
+        console.log(t("github.fetching_prompt_data_for_issue"))
         const issueResult = await octoGraph<IssueQueryResponse>(
           `
 query($owner: String!, $repo: String!, $number: Int!) {
@@ -1450,7 +1451,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
         )
 
         const issue = issueResult.repository.issue
-        if (!issue) throw new Error(`Issue #${issueId} not found`)
+        if (!issue) throw new Error(t("github.issue_not_found", { issueId: issueId }))
 
         return issue
       }
@@ -1486,7 +1487,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
       }
 
       async function fetchPR() {
-        console.log("Fetching prompt data for PR...")
+        console.log(t("github.fetching_prompt_data_for_pr"))
         const prResult = await octoGraph<PullRequestQueryResponse>(
           `
 query($owner: String!, $repo: String!, $number: Int!) {
@@ -1578,7 +1579,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
         )
 
         const pr = prResult.repository.pullRequest
-        if (!pr) throw new Error(`PR #${issueId} not found`)
+        if (!pr) throw new Error(t("github.pr_not_found", { issueId: issueId }))
 
         return pr
       }

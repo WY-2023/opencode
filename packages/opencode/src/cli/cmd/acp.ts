@@ -10,15 +10,16 @@ import { createOpencodeClient } from "@opencode-ai/sdk/v2"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ACPNextProfile } from "@/acp-next/profile"
+import { t } from "@/i18n/index"
 
 const log = Log.create({ service: "acp-command" })
 
 export const AcpCommand = effectCmd({
   command: "acp",
-  describe: "start ACP (Agent Client Protocol) server",
+  describe: t("acp.start_acp_agent_client_protocol_server"),
   builder: (yargs) => {
     return withNetworkOptions(yargs).option("cwd", {
-      describe: "working directory",
+      describe: t("acp.working_directory"),
       type: "string",
       default: process.cwd(),
     })

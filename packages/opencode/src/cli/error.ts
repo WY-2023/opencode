@@ -1,6 +1,7 @@
 import { NamedError } from "@opencode-ai/core/util/error"
 import { errorFormat } from "@/util/error"
 import { isRecord } from "@/util/record"
+import { t } from "@/i18n/index"
 
 type ConfigIssue = { message: string; path: string[] }
 
@@ -47,7 +48,7 @@ export function FormatError(input: unknown): string | undefined {
   // MCPFailed: { name: string }
   if (NamedError.hasName(input, "MCPFailed")) {
     const data = isRecord(input) && isRecord(input.data) ? stringField(input.data, "name") : undefined
-    return `MCP server "${data}" failed. Note, opencode does not support MCP authentication yet.`
+    return t("error.mcp_server_failed_note_opencode_does_not_support_m", { data: data })
   }
 
   // AccountServiceError, AccountTransportError: TaggedErrorClass
@@ -63,9 +64,9 @@ export function FormatError(input: unknown): string | undefined {
       : []
     return [
       `Model not found: ${stringField(providerModelNotFound, "providerID")}/${stringField(providerModelNotFound, "modelID")}`,
-      ...(suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),
-      `Try: \`opencode models\` to list available models`,
-      `Or check your config (opencode.json) provider/model names`,
+      ...(suggestions.length ? [t("error.did_you_mean") + suggestions.join(", ")] : []),
+      t("error.try_opencode_models_to_list_available_models"),
+      t("error.or_check_your_config_opencodejson_providermodel_na"),
     ].join("\n")
   }
 

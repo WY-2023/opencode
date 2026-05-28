@@ -8,21 +8,22 @@ import { cmd } from "./cmd"
 import { JsonMigration } from "@/storage/json-migration"
 import { EOL } from "os"
 import { errorMessage } from "../../util/error"
+import { t } from "@/i18n/index"
 
 const QueryCommand = cmd({
   command: "$0 [query]",
-  describe: "open an interactive sqlite3 shell or run a query",
+  describe: t("db.open_an_interactive_sqlite3_shell_or_run_a_query"),
   builder: (yargs: Argv) => {
     return yargs
       .positional("query", {
         type: "string",
-        describe: "SQL query to execute",
+        describe: t("db.sql_query_to_execute"),
       })
       .option("format", {
         type: "string",
         choices: ["json", "tsv"],
         default: "tsv",
-        describe: "Output format",
+        describe: t("db.output_format"),
       })
   },
   handler: async (args: { query?: string; format: string }) => {
@@ -56,7 +57,7 @@ const QueryCommand = cmd({
 
 const PathCommand = cmd({
   command: "path",
-  describe: "print the database path",
+  describe: t("db.print_the_database_path"),
   handler: () => {
     console.log(Database.getPath())
   },
@@ -64,7 +65,7 @@ const PathCommand = cmd({
 
 const MigrateCommand = cmd({
   command: "migrate",
-  describe: "migrate JSON data to SQLite (merges with existing data)",
+  describe: t("db.migrate_json_data_to_sqlite_merges_with_existing_d"),
   handler: async () => {
     const sqlite = new BunDatabase(Database.getPath())
     const tty = process.stderr.isTTY
@@ -95,10 +96,10 @@ const MigrateCommand = cmd({
       if (tty) process.stderr.write("\x1b[?25h")
       else process.stderr.write(`sqlite-migration:done${EOL}`)
       UI.println(
-        `Migration complete: ${stats.projects} projects, ${stats.sessions} sessions, ${stats.messages} messages`,
+        t("db.migration_complete_projects_sessions_messages", { stats_projects: stats.projects, stats_sessions: stats.sessions, stats_messages: stats.messages }),
       )
       if (stats.errors.length > 0) {
-        UI.println(`${stats.errors.length} errors occurred during migration`)
+        UI.println(t("db.errors_occurred_during_migration", { stats_errors_length: stats.errors.length }))
       }
     } catch (err) {
       if (tty) process.stderr.write("\x1b[?25h")
@@ -112,7 +113,7 @@ const MigrateCommand = cmd({
 
 export const DbCommand = cmd({
   command: "db",
-  describe: "database tools",
+  describe: t("db.database_tools"),
   builder: (yargs: Argv) => {
     return yargs.command(QueryCommand).command(PathCommand).command(MigrateCommand).demandCommand()
   },
